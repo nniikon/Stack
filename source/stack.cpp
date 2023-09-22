@@ -22,7 +22,7 @@ static StackError increaseCapacity(Stack* stk, const float coef)
 
     CHECK_AND_DUMP(stk, stderr);
 
-    stk->capacity = (elem_t)((float)stk->capacity * coef);
+    stk->capacity = (int)((float)stk->capacity * coef);
     stk->data = (elem_t*)realloc(stk->data, sizeof(elem_t) * stk->capacity);
 
     #ifndef RELEASE
@@ -95,7 +95,7 @@ StackError stackPop(Stack* stk, elem_t* elem)
 
 
     // If the size is CAPACITY_MULTIPLIER^2 smaller, than the capacity,...
-    if (stk->size <= stk->capacity / (CAPACITY_MULTIPLIER * CAPACITY_MULTIPLIER))
+    if (stk->size <= (float)stk->capacity / (CAPACITY_MULTIPLIER * CAPACITY_MULTIPLIER))
         increaseCapacity(stk, 1.0/CAPACITY_MULTIPLIER); //... decrease the capacity.
 
     if (stk->size <= 0)

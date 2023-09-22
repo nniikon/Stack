@@ -6,7 +6,14 @@
 #include <assert.h>
 #include <math.h>
 
+
 //#define RELEASE
+
+typedef double elem_t;
+#define ELEM_FORMAT "%lg"
+const elem_t POISON = 5.2365478;
+
+
 
 #ifndef RELEASE
     #define STACK_DUMP(stk, stackError, file) stackDump((stk), (stackError), (file), __FILE__, __LINE__, __FUNCTION__)
@@ -49,13 +56,6 @@
     #define DUMP_THE_ERROR       ;
     #define STACK_DUMP           ;
 #endif                                          
-
-
-//
-
-typedef double elem_t;
-#define ELEM_FORMAT "%lg"
-const elem_t POISON = 5.2365478;
 
 
 /// @brief Stack errors.
