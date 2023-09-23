@@ -10,15 +10,19 @@
 // SETTINGS
 
 //#define RELEASE
+//#define CANARY_PROTECT 
 
 typedef double elem_t;
+typedef unsigned long long canary_t;
+
 #define ELEM_FORMAT "%lg"
 static const elem_t POISON = 5.2365478;
+static const canary_t CANARY_VALUE = 0xDEADBABE;
 
 static const int STACK_SIZE_DEFAULT = 16;
 static const float CAPACITY_MULTIPLIER = 2.0;
 
-static FILE* stkerr = stderr;
+FILE* stkerr = stderr;
 
 
 /// @brief Stack errors.
@@ -34,18 +38,29 @@ enum StackError
     MEMORY_ALLOCATION_ERROR, ///< Memory allocation error.
     POP_OUT_OF_RANGE_ERROR,  ///< Pop was used at size zero. 
     OPENING_FILE_ERROR,      ///< Failed opening a file.
+    DEAD_CANARY_ERROR,       ///< Canary died. 
 };
 
 
+/// 12 debug params
 /// @brief Basic stack struct.
 struct Stack
 {
+    #ifdef CANARY_PROTECT
+    canary_t leftCanary;
+    #endif
+    
     elem_t* data; ///< Data array.
     int size;     ///< Current stack index.
     int capacity; ///< Current max size of the stack.
+
+    #ifdef CANARY_PROTECT
+    canary_t rightCanary;
+    #endif
 };
 
 
+// TODO: move to .cpp
 #ifndef RELEASE
     #define STACK_DUMP(stk, stackError, file) stackDump((stk), (stackError), (file), __FILE__, __LINE__, __FUNCTION__)
     
@@ -113,6 +128,7 @@ StackError stackInit(Stack* stk, size_t capacity);
  */
 StackError stackInit(Stack* stk);
 
+
 /**
  * @brief Puts another element into the stack, allocating more memory if needed.
  * 
@@ -122,6 +138,7 @@ StackError stackInit(Stack* stk);
  * @return Error code.
 */
 StackError stackPush(Stack* stk, const elem_t elem);
+
 
 /**
  * @brief Puts another element into the stack, allocating more memory if needed.

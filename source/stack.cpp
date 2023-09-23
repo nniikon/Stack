@@ -1,29 +1,50 @@
 #include "..\include\stack.h"
 
 
-
-
-
 StackError checkStackError(Stack *stk)
 {
-    if (stk->capacity < 0)         return NEGATIVE_CAPACITY_ERROR;
-    if (stk->size     < 0)         return NEGATIVE_SIZE_ERROR;
-    if (stk->data == NULL)         return DATA_NULL_ERROR;
-    if (stk       == NULL)         return STRUCT_NULL_ERROR;
-    if (stk->size > stk->capacity) return SIZE_CAPACITY_ERROR;
-    else      /*POST IRONIYA*/     return NO_ERROR;
+#ifdef CANARY_PROTECT
+    if (stk->leftCanary  != CANARY_VALUE) return DEAD_CANARY_ERROR;
+    if (stk->rightCanary != CANARY_VALUE) return DEAD_CANARY_ERROR;
+
+    if (*(canary_t*)((size_t)stk->data - sizeof(canary_t)) != CANARY_VALUE) return DEAD_CANARY_ERROR;
+    if (*(canary_t*)(stk->data + stk->capacity) != CANARY_VALUE)            return DEAD_CANARY_ERROR;
+#endif
+    if (stk->capacity < 0)                return NEGATIVE_CAPACITY_ERROR;
+    if (stk->size     < 0)                return NEGATIVE_SIZE_ERROR;
+    if (stk->data == NULL)                return DATA_NULL_ERROR;
+    if (stk       == NULL)                return STRUCT_NULL_ERROR;
+    if (stk->size > stk->capacity)        return SIZE_CAPACITY_ERROR;
+    else      /*POST IRONIYA*/            return NO_ERROR;
 }
 
 
 static StackError increaseCapacity(Stack* stk, const float coef)
 {
+    CHECK_DUMP_AND_RETURN_ERROR(stk, stkerr);
     if (stk == NULL)       return STRUCT_NULL_ERROR;
     if (stk->data == NULL) return DATA_NULL_ERROR;
 
-    CHECK_DUMP_AND_RETURN_ERROR(stk, stkerr);
 
     stk->capacity = (int)((float)stk->capacity * coef);
+
+    #ifdef CANARY_PROTECT
+    // Move the data to the originally allocated place.
+    stk->data = (elem_t*)(size_t(stk->data) - sizeof(canary_t));
+    stk->data = (elem_t*)realloc(stk->data, stk->capacity * sizeof(elem_t) + 2 * sizeof(canary_t));
+    ((canary_t*)stk->data)[0] = CANARY_VALUE;
+
+    // Move the data pointer to the real data.
+    stk->data = (elem_t*)((size_t)stk->data + sizeof(canary_t));
+    ((canary_t*)(stk->data + stk->capacity))[0] = CANARY_VALUE;
+    #else
     stk->data = (elem_t*)realloc(stk->data, sizeof(elem_t) * stk->capacity);
+    #endif
+
+
+    CHECK_DUMP_AND_RETURN_ERROR(stk, stkerr);  
+    if (stk->data == NULL) return MEMORY_ALLOCATION_ERROR;
+
 
     #ifndef RELEASE
 
@@ -45,14 +66,27 @@ StackError stackInit(Stack* stk, size_t capacity)
 {
     if (stk == NULL)  return STRUCT_NULL_ERROR;
 
+    stk->capacity = capacity;
+    stk->size = 0;
+
+    #ifdef CANARY_PROTECT
+    stk->leftCanary  = CANARY_VALUE;
+    stk->rightCanary = CANARY_VALUE;
+    #endif
+
+    #ifdef CANARY_PROTECT
+    stk->data = (elem_t*)malloc(capacity * sizeof(elem_t) + 2 * sizeof(canary_t));
+    ((canary_t*)stk->data)[0] = CANARY_VALUE;
+
+    // Move the data pointer to the real data.
+    stk->data = (elem_t*)((size_t)stk->data + sizeof(canary_t));
+    ((canary_t*)(stk->data + stk->capacity))[0] = CANARY_VALUE;
+    #else
     stk->data = (elem_t*)malloc(capacity * sizeof(elem_t));
+    #endif
 
     CHECK_DUMP_AND_RETURN_ERROR(stk, stkerr);
     if (stk->data == NULL) return DATA_NULL_ERROR;
-
-
-    stk->capacity = capacity;
-    stk->size = 0;
 
 
     #ifndef RELEASE
@@ -60,8 +94,11 @@ StackError stackInit(Stack* stk, size_t capacity)
         stk->data[i] = POISON;
     #endif
 
+    
+
     return NO_ERROR;
 }
+
 
 StackError stackInit(Stack* stk)
 {
@@ -87,6 +124,7 @@ StackError stackPush(Stack* stk, const elem_t elem)
     return NO_ERROR;
 }
 
+
 StackError stackPop(Stack* stk, elem_t* elem)
 {
     CHECK_DUMP_AND_RETURN_ERROR(stk, stkerr);
@@ -109,6 +147,7 @@ StackError stackPop(Stack* stk, elem_t* elem)
 
     return NO_ERROR;
 }
+
 
 StackError stackDtor(Stack* stk)
 {
@@ -149,10 +188,12 @@ void stackDump(const Stack* stk, const StackError err, FILE* file,
     fprintf(file, "\nSTACK[%p] called from %s(%d) function %s():\n", stk, fileName, line, funcName);
     fprintf(file, "\t\t\t  ERROR CODE: %d\n", err);
 
-    fprintf(file, "\t *size = %d     \n", stk->size);
-    fprintf(file, "\t *capacity = %d \n", stk->capacity);
-    fprintf(file, "\t *data[%p]:     \n", stk->data);
-
+    fprintf(file, "\t *size = %d      \n", stk->size);
+    fprintf(file, "\t *capacity = %d  \n", stk->capacity);
+    fprintf(file, "\t *data[%p]:      \n", stk->data);
+    #ifdef CANARY_PROTECT
+    fprintf(file, "\t leftCanary: %llu\n", *(canary_t*)((size_t)stk->data - sizeof(canary_t)));
+    #endif
     if (err != NEGATIVE_CAPACITY_ERROR)
     {
         for (int i = 0; i < stk->capacity; i++)
@@ -169,7 +210,10 @@ void stackDump(const Stack* stk, const StackError err, FILE* file,
             if (i == stk->size)  fprintf(file, " <\n");
             else                 fprintf(file, "  \n");
         }
-    }
+        #ifdef CANARY_PROTECT
+        fprintf(file, "\t RightCanary: %llu\n", *(canary_t*)(stk->data + stk->capacity));
+        #endif
+   }
 }
 
 
