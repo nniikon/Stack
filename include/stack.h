@@ -7,55 +7,18 @@
 #include <math.h>
 
 
+// SETTINGS
+
 //#define RELEASE
 
 typedef double elem_t;
 #define ELEM_FORMAT "%lg"
-const elem_t POISON = 5.2365478;
+static const elem_t POISON = 5.2365478;
 
+static const int STACK_SIZE_DEFAULT = 16;
+static const float CAPACITY_MULTIPLIER = 2.0;
 
-
-#ifndef RELEASE
-    #define STACK_DUMP(stk, stackError, file) stackDump((stk), (stackError), (file), __FILE__, __LINE__, __FUNCTION__)
-
-
-    /**
-     * Verifies the stack structure and report any errors.
-     * 
-     * @param[in]  stk  The stack structure to be checked.
-     * @param[out] file The file where error information should be put.
-     */
-    #define CHECK_AND_DUMP(stk, file)                          \
-    do                                                         \
-    {                                                          \
-        if (checkStackError(stk) != NO_ERROR)                  \
-        {                                                      \
-            STACK_DUMP((stk), checkStackError((stk)), (file)); \
-            return checkStackError((stk));                     \
-        }                                                      \
-    } while (0) 
-
-    /**
-     * Dumps the stack error.
-     * 
-     * @param[in]  stk   The stack structure to be dumped.
-     * @param[in]  error The error to be dumped.
-     * @param[out] file  The file where error information should be put.
-     */
-    #define DUMP_THE_ERROR(stk, error, file)                   \
-    do                                                         \
-    {                                                          \
-        if ((error) != NO_ERROR)                               \
-        {                                                      \
-            STACK_DUMP((stk), (error), (file));                \
-            return (error);                                    \
-        }                                                      \
-    } while (0) 
-#else
-    #define CHECK_AND_DUMP       ;
-    #define DUMP_THE_ERROR       ;
-    #define STACK_DUMP           ;
-#endif                                          
+static FILE* stkerr = stderr;
 
 
 /// @brief Stack errors.
@@ -70,7 +33,9 @@ enum StackError
     SIZE_CAPACITY_ERROR,     ///< Size is greater than capacity.
     MEMORY_ALLOCATION_ERROR, ///< Memory allocation error.
     POP_OUT_OF_RANGE_ERROR,  ///< Pop was used at size zero. 
+    OPENING_FILE_ERROR,      ///< Failed opening a file.
 };
+
 
 /// @brief Basic stack struct.
 struct Stack
@@ -79,6 +44,49 @@ struct Stack
     int size;     ///< Current stack index.
     int capacity; ///< Current max size of the stack.
 };
+
+
+#ifndef RELEASE
+    #define STACK_DUMP(stk, stackError, file) stackDump((stk), (stackError), (file), __FILE__, __LINE__, __FUNCTION__)
+    
+    /**
+     * Verifies the stack structure and returns any errors.
+     * 
+     * @param[in]  stk  The stack structure to be checked.
+     * @param[out] file The file where error information should be put.
+     */
+    #define CHECK_DUMP_AND_RETURN_ERROR(stk, file)             \
+    do                                                         \
+    {                                                          \
+        if (checkStackError(stk) != NO_ERROR)                  \
+        {                                                      \
+            STACK_DUMP((stk), checkStackError((stk)), (file)); \
+            return checkStackError((stk));                     \
+        }                                                      \
+    } while (0) 
+
+    /**
+     * Dumps the stack error and returns any errors.
+     * 
+     * @param[in]  stk   The stack structure to be dumped.
+     * @param[in]  error The error to be dumped.
+     * @param[out] file  The file where error information should be put.
+     */
+    #define DUMP_AND_RETURN_ERROR(stk, error, file)            \
+    do                                                         \
+    {                                                          \
+        if ((error) != NO_ERROR)                               \
+        {                                                      \
+            STACK_DUMP((stk), (error), (file));                \
+            return (error);                                    \
+        }                                                      \
+    } while (0) 
+
+#else
+    #define CHECK_DUMP_AND_RETURN_ERROR ;
+    #define DUMP_AND_RETURN_ERROR       ;
+    #define STACK_DUMP                  ;
+#endif                                          
 
 
 /**
@@ -141,4 +149,8 @@ StackError checkStackError(Stack *stk);
 
 void stackDump(const Stack* stk, const StackError err, FILE* file, 
                const char* fileName, const size_t line, const char* funcName);
+
+
+StackError setLogFile(const char* fileName);
+
 #endif

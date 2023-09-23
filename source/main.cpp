@@ -5,27 +5,18 @@
 
 int main()
 {
+    StackError error = NO_ERROR;
+
     Stack stk = {};
     stackInit(&stk, 16);
 
+    error = setLogFile("log.txt");
+    DUMP_AND_RETURN_ERROR(&stk, error, stkerr);
+
     for (int i = 0; i < 100; i++) 
     {
-        StackError error = stackPush(&stk, i*i);
-        if (error != NO_ERROR)
-        {
-            return error;
-        }
+        error = stackPush(&stk, i*i);
     }
-    // for (int i = 0; i < 99; i++)
-    // {
-    //     elem_t a = 0;
-    //     StackError error = stackPop(&stk, &a);
-    //     printf(": %lg\n", a);
-    //     if (error != NO_ERROR)
-    //     {
-    //         return error;
-    //     }
-    // }
-    DUMP_THE_ERROR(&stk, MEMORY_ALLOCATION_ERROR, stderr);
+    DUMP_AND_RETURN_ERROR(&stk, NEGATIVE_SIZE_ERROR, stkerr);
     stackDtor(&stk);
 }

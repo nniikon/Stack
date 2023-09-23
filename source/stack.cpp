@@ -1,8 +1,8 @@
 #include "..\include\stack.h"
 
 
-const int STACK_SIZE_DEFAULT = 16;
-const float CAPACITY_MULTIPLIER = 2.0;
+
+
 
 StackError checkStackError(Stack *stk)
 {
@@ -20,7 +20,7 @@ static StackError increaseCapacity(Stack* stk, const float coef)
     if (stk == NULL)       return STRUCT_NULL_ERROR;
     if (stk->data == NULL) return DATA_NULL_ERROR;
 
-    CHECK_AND_DUMP(stk, stderr);
+    CHECK_DUMP_AND_RETURN_ERROR(stk, stkerr);
 
     stk->capacity = (int)((float)stk->capacity * coef);
     stk->data = (elem_t*)realloc(stk->data, sizeof(elem_t) * stk->capacity);
@@ -34,7 +34,7 @@ static StackError increaseCapacity(Stack* stk, const float coef)
 
     #endif
 
-    CHECK_AND_DUMP(stk, stderr);
+    CHECK_DUMP_AND_RETURN_ERROR(stk, stkerr);
 
     return NO_ERROR;
 
@@ -47,7 +47,7 @@ StackError stackInit(Stack* stk, size_t capacity)
 
     stk->data = (elem_t*)malloc(capacity * sizeof(elem_t));
 
-    CHECK_AND_DUMP(stk, stderr);
+    CHECK_DUMP_AND_RETURN_ERROR(stk, stkerr);
     if (stk->data == NULL) return DATA_NULL_ERROR;
 
 
@@ -71,14 +71,14 @@ StackError stackInit(Stack* stk)
 
 StackError stackPush(Stack* stk, const elem_t elem)
 {
-    CHECK_AND_DUMP(stk, stderr);
+    CHECK_DUMP_AND_RETURN_ERROR(stk, stkerr);
     if (stk == NULL) return DATA_NULL_ERROR;
 
 
     if (stk->size >= stk->capacity) 
     {
         StackError error = increaseCapacity(stk, CAPACITY_MULTIPLIER);
-        DUMP_THE_ERROR(stk, error, stderr);
+        DUMP_AND_RETURN_ERROR(stk, error, stkerr);
     }
 
     stk->data[stk->size++] = elem;
@@ -89,7 +89,7 @@ StackError stackPush(Stack* stk, const elem_t elem)
 
 StackError stackPop(Stack* stk, elem_t* elem)
 {
-    CHECK_AND_DUMP(stk, stderr);
+    CHECK_DUMP_AND_RETURN_ERROR(stk, stkerr);
     if (elem == NULL)      return ELEM_NULL_ERROR;
     if (stk->data == NULL) return DATA_NULL_ERROR;
 
@@ -100,7 +100,7 @@ StackError stackPop(Stack* stk, elem_t* elem)
 
     if (stk->size <= 0)
     {
-        STACK_DUMP(stk, POP_OUT_OF_RANGE_ERROR, stderr);
+        STACK_DUMP(stk, POP_OUT_OF_RANGE_ERROR, stkerr);
         return POP_OUT_OF_RANGE_ERROR;
     }
 
@@ -126,7 +126,7 @@ StackError stackDtor(Stack* stk)
     StackError error = checkStackError(stk);
     if (error != NO_ERROR)
     {
-        STACK_DUMP(stk, error, stderr);
+        STACK_DUMP(stk, error, stkerr);
         free(stk->data);
         return error;
     }
@@ -170,4 +170,16 @@ void stackDump(const Stack* stk, const StackError err, FILE* file,
             else                 fprintf(file, "  \n");
         }
     }
+}
+
+
+StackError setLogFile(const char* fileName)
+{
+    FILE* file = fopen(fileName, "w");
+    if (file == NULL)
+        return OPENING_FILE_ERROR;
+    
+    stkerr = file;
+
+    return NO_ERROR;
 }
