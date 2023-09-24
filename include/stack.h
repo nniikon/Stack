@@ -17,8 +17,8 @@ typedef unsigned long long canary_t;
 
 #define ELEM_FORMAT "%lg"
 static const elem_t POISON = 5.2365478;
-#define CANARY_FORMAT "%llu"
-static const canary_t CANARY_VALUE = 0xDEADBABE;
+#define CANARY_FORMAT "%llx"
+static const canary_t CANARY_VALUE = 0xBAADF00D;
 
 static const int STACK_SIZE_DEFAULT = 16;
 static const float CAPACITY_MULTIPLIER = 2.0;
