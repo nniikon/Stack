@@ -10,19 +10,18 @@
 // SETTINGS
 
 //#define RELEASE
-//#define CANARY_PROTECT 
+#define CANARY_PROTECT 
 
 typedef double elem_t;
 typedef unsigned long long canary_t;
 
 #define ELEM_FORMAT "%lg"
 static const elem_t POISON = 5.2365478;
+#define CANARY_FORMAT "%llu"
 static const canary_t CANARY_VALUE = 0xDEADBABE;
 
 static const int STACK_SIZE_DEFAULT = 16;
 static const float CAPACITY_MULTIPLIER = 2.0;
-
-FILE* stkerr = stderr;
 
 
 /// @brief Stack errors.
@@ -59,49 +58,8 @@ struct Stack
     #endif
 };
 
-
-// TODO: move to .cpp
-#ifndef RELEASE
-    #define STACK_DUMP(stk, stackError, file) stackDump((stk), (stackError), (file), __FILE__, __LINE__, __FUNCTION__)
-    
-    /**
-     * Verifies the stack structure and returns any errors.
-     * 
-     * @param[in]  stk  The stack structure to be checked.
-     * @param[out] file The file where error information should be put.
-     */
-    #define CHECK_DUMP_AND_RETURN_ERROR(stk, file)             \
-    do                                                         \
-    {                                                          \
-        if (checkStackError(stk) != NO_ERROR)                  \
-        {                                                      \
-            STACK_DUMP((stk), checkStackError((stk)), (file)); \
-            return checkStackError((stk));                     \
-        }                                                      \
-    } while (0) 
-
-    /**
-     * Dumps the stack error and returns any errors.
-     * 
-     * @param[in]  stk   The stack structure to be dumped.
-     * @param[in]  error The error to be dumped.
-     * @param[out] file  The file where error information should be put.
-     */
-    #define DUMP_AND_RETURN_ERROR(stk, error, file)            \
-    do                                                         \
-    {                                                          \
-        if ((error) != NO_ERROR)                               \
-        {                                                      \
-            STACK_DUMP((stk), (error), (file));                \
-            return (error);                                    \
-        }                                                      \
-    } while (0) 
-
-#else
-    #define CHECK_DUMP_AND_RETURN_ERROR ;
-    #define DUMP_AND_RETURN_ERROR       ;
-    #define STACK_DUMP                  ;
-#endif                                          
+// TODO: DELETE
+void stackDump(Stack* stk);
 
 
 /**

@@ -1,6 +1,58 @@
 #include "..\include\stack.h"
 
 
+static FILE* stkerr = stderr;
+
+
+// TODO: move to .cpp
+#ifndef RELEASE
+    #define STACK_DUMP(stk, stackError) stackDump((stk), (stackError), stkerr, __FILE__, __LINE__, __FUNCTION__)
+    
+    /**
+     * Verifies the stack structure and returns any errors.
+     * 
+     * @param[in]  stk  The stack structure to be checked.
+     */
+    #define CHECK_DUMP_AND_RETURN_ERROR(stk)                     \
+    do                                                           \
+    {                                                            \
+        if (checkStackError(stk) != NO_ERROR)                    \
+        {                                                        \
+            STACK_DUMP((stk), checkStackError((stk)));           \
+            return checkStackError((stk));                       \
+        }                                                        \
+    } while (0) 
+
+    /**
+     * Dumps the stack error and returns any errors.
+     * 
+     * @param[in]  stk   The stack structure to be dumped.
+     * @param[in]  error The error to be dumped.
+     */
+    #define DUMP_AND_RETURN_ERROR(stk, error)                  \
+    do                                                         \
+    {                                                          \
+        if ((error) != NO_ERROR)                               \
+        {                                                      \
+            STACK_DUMP((stk), (error));                        \
+            return (error);                                    \
+        }                                                      \
+    } while (0) 
+
+#else
+    #define CHECK_DUMP_AND_RETURN_ERROR ;
+    #define DUMP_AND_RETURN_ERROR       ;
+    #define STACK_DUMP                  ;
+#endif                                          
+
+
+void stackDump(Stack* stk)
+{
+    STACK_DUMP(stk, NO_ERROR);
+}
+
+
+
 StackError checkStackError(Stack *stk)
 {
 #ifdef CANARY_PROTECT
@@ -21,7 +73,7 @@ StackError checkStackError(Stack *stk)
 
 static StackError increaseCapacity(Stack* stk, const float coef)
 {
-    CHECK_DUMP_AND_RETURN_ERROR(stk, stkerr);
+    CHECK_DUMP_AND_RETURN_ERROR(stk);
     if (stk == NULL)       return STRUCT_NULL_ERROR;
     if (stk->data == NULL) return DATA_NULL_ERROR;
 
@@ -42,7 +94,7 @@ static StackError increaseCapacity(Stack* stk, const float coef)
     #endif
 
 
-    CHECK_DUMP_AND_RETURN_ERROR(stk, stkerr);  
+    CHECK_DUMP_AND_RETURN_ERROR(stk);
     if (stk->data == NULL) return MEMORY_ALLOCATION_ERROR;
 
 
@@ -55,7 +107,7 @@ static StackError increaseCapacity(Stack* stk, const float coef)
 
     #endif
 
-    CHECK_DUMP_AND_RETURN_ERROR(stk, stkerr);
+    CHECK_DUMP_AND_RETURN_ERROR(stk);
 
     return NO_ERROR;
 
@@ -85,7 +137,7 @@ StackError stackInit(Stack* stk, size_t capacity)
     stk->data = (elem_t*)malloc(capacity * sizeof(elem_t));
     #endif
 
-    CHECK_DUMP_AND_RETURN_ERROR(stk, stkerr);
+    CHECK_DUMP_AND_RETURN_ERROR(stk);
     if (stk->data == NULL) return DATA_NULL_ERROR;
 
 
@@ -94,7 +146,7 @@ StackError stackInit(Stack* stk, size_t capacity)
         stk->data[i] = POISON;
     #endif
 
-    
+
 
     return NO_ERROR;
 }
@@ -108,14 +160,14 @@ StackError stackInit(Stack* stk)
 
 StackError stackPush(Stack* stk, const elem_t elem)
 {
-    CHECK_DUMP_AND_RETURN_ERROR(stk, stkerr);
+    CHECK_DUMP_AND_RETURN_ERROR(stk);
     if (stk == NULL) return DATA_NULL_ERROR;
 
 
-    if (stk->size >= stk->capacity) 
+    if (stk->size >= stk->capacity)
     {
         StackError error = increaseCapacity(stk, CAPACITY_MULTIPLIER);
-        DUMP_AND_RETURN_ERROR(stk, error, stkerr);
+        DUMP_AND_RETURN_ERROR(stk, error);
     }
 
     stk->data[stk->size++] = elem;
@@ -127,7 +179,7 @@ StackError stackPush(Stack* stk, const elem_t elem)
 
 StackError stackPop(Stack* stk, elem_t* elem)
 {
-    CHECK_DUMP_AND_RETURN_ERROR(stk, stkerr);
+    CHECK_DUMP_AND_RETURN_ERROR(stk);
     if (elem == NULL)      return ELEM_NULL_ERROR;
     if (stk->data == NULL) return DATA_NULL_ERROR;
 
@@ -138,7 +190,7 @@ StackError stackPop(Stack* stk, elem_t* elem)
 
     if (stk->size <= 0)
     {
-        STACK_DUMP(stk, POP_OUT_OF_RANGE_ERROR, stkerr);
+        STACK_DUMP(stk, POP_OUT_OF_RANGE_ERROR);
         return POP_OUT_OF_RANGE_ERROR;
     }
 
@@ -165,7 +217,7 @@ StackError stackDtor(Stack* stk)
     StackError error = checkStackError(stk);
     if (error != NO_ERROR)
     {
-        STACK_DUMP(stk, error, stkerr);
+        STACK_DUMP(stk, error);
         free(stk->data);
         return error;
     }
@@ -174,14 +226,14 @@ StackError stackDtor(Stack* stk)
     {
         stk->data[i] = POISON;
     }
-    
+
     return error;
 
     #endif
 }
 
 
-void stackDump(const Stack* stk, const StackError err, FILE* file, 
+void stackDump(const Stack* stk, const StackError err, FILE* file,
                const char* fileName, const size_t line, const char* funcName)
 {
     fprintf(file, "----------------------------------------------------------------");
@@ -192,7 +244,7 @@ void stackDump(const Stack* stk, const StackError err, FILE* file,
     fprintf(file, "\t *capacity = %d  \n", stk->capacity);
     fprintf(file, "\t *data[%p]:      \n", stk->data);
     #ifdef CANARY_PROTECT
-    fprintf(file, "\t leftCanary: %llu\n", *(canary_t*)((size_t)stk->data - sizeof(canary_t)));
+    fprintf(file, "\t leftCanary:" CANARY_FORMAT "\n", *(canary_t*)((size_t)stk->data - sizeof(canary_t)));
     #endif
     if (err != NEGATIVE_CAPACITY_ERROR)
     {
@@ -211,7 +263,7 @@ void stackDump(const Stack* stk, const StackError err, FILE* file,
             else                 fprintf(file, "  \n");
         }
         #ifdef CANARY_PROTECT
-        fprintf(file, "\t RightCanary: %llu\n", *(canary_t*)(stk->data + stk->capacity));
+        fprintf(file, "\t RightCanary:" CANARY_FORMAT "\n", *(canary_t*)(stk->data + stk->capacity));
         #endif
    }
 }
@@ -222,7 +274,7 @@ StackError setLogFile(const char* fileName)
     FILE* file = fopen(fileName, "w");
     if (file == NULL)
         return OPENING_FILE_ERROR;
-    
+
     stkerr = file;
 
     return NO_ERROR;
