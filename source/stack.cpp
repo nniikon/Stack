@@ -4,6 +4,10 @@
 static FILE* stkerr = stderr;
 
 
+
+static void stackDump(const Stack* stk, const StackError err, FILE* file,
+               const char* fileName, const size_t line, const char* funcName);
+
 // TODO: move to .cpp
 #ifndef RELEASE
     #define STACK_DUMP(stk, stackError) stackDump((stk), (stackError), stkerr, __FILE__, __LINE__, __FUNCTION__)
@@ -44,6 +48,31 @@ static FILE* stkerr = stderr;
     #define DUMP_AND_RETURN_ERROR       ;
     #define STACK_DUMP                  ;
 #endif                                          
+
+#ifdef HASH_PROTECT
+
+    #define CHECK_HASH_RETURN_ERROR(stk)                      \
+    do                                                        \
+    {                                                         \
+        if ((stk)->hash != calculateStackHash((stk)))         \
+        {                                                     \
+            return UNREGISTRED_ACCESS_ERROR;                  \
+        }                                                     \
+    } while (0);
+    
+    #define UPDATE_HASH(stk)                                  \
+    do                                                        \
+    {                                                         \
+        (stk)->hash = calculateStackHash(stk);                \
+    } while (0);                                              
+    
+
+#else
+    #define CHECK_HASH_RETURN_ERROR(stk) ;
+    #define UPDATE_HASH(stk) ;
+#endif
+
+
 
 
 void stackDump(Stack* stk)
@@ -140,6 +169,9 @@ StackError stackInit(Stack* stk, size_t capacity)
     CHECK_DUMP_AND_RETURN_ERROR(stk);
     if (stk->data == NULL) return DATA_NULL_ERROR;
 
+    #ifdef HASH_PROTECT
+    stk->hash = calculateStackHash(stk);
+    #endif
 
     #ifndef RELEASE
     for (int i = 0; i < stk->capacity; i++)
@@ -160,6 +192,7 @@ StackError stackInit(Stack* stk)
 
 StackError stackPush(Stack* stk, const elem_t elem)
 {
+    CHECK_HASH_RETURN_ERROR(stk);
     CHECK_DUMP_AND_RETURN_ERROR(stk);
     if (stk == NULL) return DATA_NULL_ERROR;
 
@@ -172,7 +205,7 @@ StackError stackPush(Stack* stk, const elem_t elem)
 
     stk->data[stk->size++] = elem;
 
-
+    UPDATE_HASH(stk);
     return NO_ERROR;
 }
 
@@ -193,10 +226,12 @@ StackError stackPop(Stack* stk, elem_t* elem)
         STACK_DUMP(stk, POP_OUT_OF_RANGE_ERROR);
         return POP_OUT_OF_RANGE_ERROR;
     }
-
+    #ifndef RELEASE
+    stk->data[stk->size] = POISON;
+    #endif
     *elem = stk->data[--stk->size];
-
-
+    
+    UPDATE_HASH(stk);
     return NO_ERROR;
 }
 
@@ -233,7 +268,7 @@ StackError stackDtor(Stack* stk)
 }
 
 
-void stackDump(const Stack* stk, const StackError err, FILE* file,
+static void stackDump(const Stack* stk, const StackError err, FILE* file,
                const char* fileName, const size_t line, const char* funcName)
 {
     fprintf(file, "----------------------------------------------------------------");
@@ -266,6 +301,32 @@ void stackDump(const Stack* stk, const StackError err, FILE* file,
         fprintf(file, "\t RightCanary:" CANARY_FORMAT "\n", *(canary_t*)(stk->data + stk->capacity));
         #endif
    }
+}
+
+
+static unsigned long long calculateHash(const char* dataStart, const size_t size)
+{
+    assert(dataStart);
+
+    unsigned long long hash = +79653421411ull; 
+    for (size_t i = 0; i < size; i++)
+    {
+        hash += int(dataStart[i]) * i;
+    }
+    return hash;
+}
+
+
+unsigned long long calculateStackHash(const Stack* stk)
+{
+    unsigned long long hash = 0ull;
+
+    hash += calculateHash((const char*)stk->data, stk->size * sizeof(elem_t));
+
+    size_t stackSize = sizeof(&(stk->data)) + sizeof(stk->size) + sizeof(stk->capacity);
+    hash += calculateHash((const char*)(&(stk->data)), stackSize);
+
+    return hash;
 }
 
 

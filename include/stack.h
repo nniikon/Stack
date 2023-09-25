@@ -11,13 +11,14 @@
 
 //#define RELEASE
 #define CANARY_PROTECT 
+#define HASH_PROTECT
 
-typedef double elem_t;
+typedef int elem_t;
 typedef unsigned long long canary_t;
 
-#define ELEM_FORMAT "%lg"
-static const elem_t POISON = 5.2365478;
-#define CANARY_FORMAT "%llx"
+#define ELEM_FORMAT "%d"
+static const elem_t POISON = __INT_FAST32_MAX__;
+#define CANARY_FORMAT "%llu"
 static const canary_t CANARY_VALUE = 0xBAADF00D;
 
 static const int STACK_SIZE_DEFAULT = 16;
@@ -27,17 +28,18 @@ static const float CAPACITY_MULTIPLIER = 2.0;
 /// @brief Stack errors.
 enum StackError
 {
-    NO_ERROR,                ///< No error.
-    DATA_NULL_ERROR,         ///< Data is NULL.
-    ELEM_NULL_ERROR,         ///< Elem is NULL.
-    STRUCT_NULL_ERROR,       ///< Struct is NULL.  
-    NEGATIVE_SIZE_ERROR,     ///< Negative size.
-    NEGATIVE_CAPACITY_ERROR, ///< Negative capacity.
-    SIZE_CAPACITY_ERROR,     ///< Size is greater than capacity.
-    MEMORY_ALLOCATION_ERROR, ///< Memory allocation error.
-    POP_OUT_OF_RANGE_ERROR,  ///< Pop was used at size zero. 
-    OPENING_FILE_ERROR,      ///< Failed opening a file.
-    DEAD_CANARY_ERROR,       ///< Canary died. 
+    NO_ERROR,                 ///< No error.
+    DATA_NULL_ERROR,          ///< Data is NULL.
+    ELEM_NULL_ERROR,          ///< Elem is NULL.
+    STRUCT_NULL_ERROR,        ///< Struct is NULL.  
+    NEGATIVE_SIZE_ERROR,      ///< Negative size.
+    NEGATIVE_CAPACITY_ERROR,  ///< Negative capacity.
+    SIZE_CAPACITY_ERROR,      ///< Size is greater than capacity.
+    MEMORY_ALLOCATION_ERROR,  ///< Memory allocation error.
+    POP_OUT_OF_RANGE_ERROR,   ///< Pop was used at size zero. 
+    OPENING_FILE_ERROR,       ///< Failed opening a file.
+    DEAD_CANARY_ERROR,        ///< Canary died. 
+    UNREGISTRED_ACCESS_ERROR, ///< Hash changed.
 };
 
 
@@ -52,6 +54,10 @@ struct Stack
     elem_t* data; ///< Data array.
     int size;     ///< Current stack index.
     int capacity; ///< Current max size of the stack.
+
+    #ifdef HASH_PROTECT
+    unsigned long long hash;
+    #endif
 
     #ifdef CANARY_PROTECT
     canary_t rightCanary;
@@ -112,20 +118,26 @@ StackError stackPop(Stack* stk, elem_t* elem);
 /**
  * @brief Destructor for stack structure.
  * 
- * @param stk[in] Stack struct
+ * @param[in] stk Stack struct.
  * 
  * @return Error code.
 */
 StackError stackDtor(Stack* stk);
 
 
+/**
+ * @brief Check stack class for errors.
+ * 
+ * @param[in] stk Stack struct.
+ * 
+ * @return Error code.
+ */
 StackError checkStackError(Stack *stk);
 
 
-void stackDump(const Stack* stk, const StackError err, FILE* file, 
-               const char* fileName, const size_t line, const char* funcName);
-
-
 StackError setLogFile(const char* fileName);
+
+
+unsigned long long calculateStackHash(const Stack* stk);
 
 #endif
