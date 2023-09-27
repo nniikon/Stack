@@ -17,29 +17,29 @@ typedef int elem_t;
 typedef unsigned long long canary_t;
 
 #define ELEM_FORMAT "%d"
-static const elem_t POISON = __INT_FAST32_MAX__;
-#define CANARY_FORMAT "%llu"
+static const elem_t POISON = __INT_MAX__;
+#define CANARY_FORMAT "%llx"
 static const canary_t CANARY_VALUE = 0xBAADF00D;
 
 static const int STACK_SIZE_DEFAULT = 16;
-static const float CAPACITY_MULTIPLIER = 2.0;
+static const float STACK_CAPACITY_MULTIPLIER = 2.0;
 
 
-/// @brief Stack errors.
+/// @brief Enum defining possible errors in a stack.
 enum StackError
 {
-    NO_ERROR,                 ///< No error.
-    DATA_NULL_ERROR,          ///< Data is NULL.
-    ELEM_NULL_ERROR,          ///< Elem is NULL.
-    STRUCT_NULL_ERROR,        ///< Struct is NULL.  
-    NEGATIVE_SIZE_ERROR,      ///< Negative size.
-    NEGATIVE_CAPACITY_ERROR,  ///< Negative capacity.
-    SIZE_CAPACITY_ERROR,      ///< Size is greater than capacity.
-    MEMORY_ALLOCATION_ERROR,  ///< Memory allocation error.
-    POP_OUT_OF_RANGE_ERROR,   ///< Pop was used at size zero. 
-    OPENING_FILE_ERROR,       ///< Failed opening a file.
-    DEAD_CANARY_ERROR,        ///< Canary died. 
-    UNREGISTRED_ACCESS_ERROR, ///< Hash changed.
+    NO_ERROR,                  ///< No error occurred.
+    DATA_NULL_ERROR,           ///< Data is NULL, indicating an uninitialized stack.
+    ELEM_NULL_ERROR,           ///< Elem is NULL, which is unexpected.
+    STRUCT_NULL_ERROR,         ///< Struct is NULL, indicating an uninitialized stack structure.
+    NEGATIVE_SIZE_ERROR,       ///< Size cannot be negative.
+    NEGATIVE_CAPACITY_ERROR,   ///< Capacity cannot be negative.
+    SIZE_CAPACITY_ERROR,       ///< Size should not exceed capacity.
+    MEMORY_ALLOCATION_ERROR,   ///< Error during memory allocation (malloc or realloc).
+    POP_OUT_OF_RANGE_ERROR,    ///< Attempted pop operation on an empty stack.
+    OPENING_FILE_ERROR,        ///< Failed to open a file.
+    DEAD_CANARY_ERROR,         ///< Canary value indicates a possible stack attack.
+    UNREGISTERED_ACCESS_ERROR, ///< Hash mismatch due to unauthorized data manipulation.
 };
 
 
@@ -64,9 +64,24 @@ struct Stack
     #endif
 };
 
-// TODO: DELETE
-void stackDump(Stack* stk);
 
+
+
+
+
+
+/**
+ * @brief Dump all relevant stack information with the given error to the log file (stderr by default).
+ * 
+ * @param[in] stk The stack struct.
+ * @param[in] StackError The error code.
+ * 
+ * @note You can change the log file using `setLogFile("FILE_NAME")`.
+ */
+#define stackDump(stk, stackError) stackDump_internal((stk), (stackError), __FILE__, __LINE__, __FUNCTION__)
+
+void stackDump_internal(const Stack* stk, const StackError err,
+               const char* fileName, const size_t line, const char* funcName);
 
 /**
  * @brief Initializes a stack structure.
@@ -123,16 +138,6 @@ StackError stackPop(Stack* stk, elem_t* elem);
  * @return Error code.
 */
 StackError stackDtor(Stack* stk);
-
-
-/**
- * @brief Check stack class for errors.
- * 
- * @param[in] stk Stack struct.
- * 
- * @return Error code.
- */
-StackError checkStackError(Stack *stk);
 
 
 StackError setLogFile(const char* fileName);
