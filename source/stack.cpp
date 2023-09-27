@@ -143,8 +143,6 @@ static StackError increaseCapacity(Stack* stk, const float coef)
 
 StackError stackInit(Stack* stk, size_t capacity)
 {
-    if (stk == NULL)  return STRUCT_NULL_ERROR;
-
     stk->capacity = capacity;
     stk->size = 0;
 
