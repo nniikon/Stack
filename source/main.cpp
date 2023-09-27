@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "..\include\stack.h"
+#include "../include/stack.h"
 
 #define CHECK_ERROR(error)         \
 do                                 \
@@ -34,7 +34,7 @@ int main()
         CHECK_ERROR(error); 
     }
     stackDump(&stk, NO_ERROR);
-    stk.size = 0;
+
     for (int i = 0; i < 90; i++)
     {
         int a = 0;

@@ -1,4 +1,4 @@
-#include "..\include\stack.h"
+#include "../include/stack.h"
 
 
 static FILE* stkerr = stderr;
@@ -143,7 +143,7 @@ static StackError increaseCapacity(Stack* stk, const float coef)
 
 StackError stackInit(Stack* stk, size_t capacity)
 {
-    stk->capacity = capacity;
+    stk->capacity = (int)capacity;
     stk->size = 0;
 
     #ifdef CANARY_PROTECT
@@ -213,7 +213,7 @@ StackError stackPop(Stack* stk, elem_t* elem)
     if (elem == NULL)      return ELEM_NULL_ERROR;
     if (stk->data == NULL) return DATA_NULL_ERROR;
     // If the size is STACK_CAPACITY_MULTIPLIER^2 smaller, than the capacity,...
-    if (stk->size <= (float)stk->capacity / (STACK_CAPACITY_MULTIPLIER * STACK_CAPACITY_MULTIPLIER))
+    if (stk->size <= (int)((float)stk->capacity / (STACK_CAPACITY_MULTIPLIER * STACK_CAPACITY_MULTIPLIER)))
         increaseCapacity(stk, 1.0/STACK_CAPACITY_MULTIPLIER); //... decrease the capacity.
 
     if (stk->size <= 0)
@@ -267,7 +267,7 @@ void stackDump_internal(const Stack* stk, const StackError err,
                const char* fileName, const size_t line, const char* funcName)
 {
     fprintf(stkerr, "----------------------------------------------------------------");
-    fprintf(stkerr, "\nSTACK[%p] called from %s(%d) function %s():\n", stk, fileName, line, funcName);
+    fprintf(stkerr, "\nSTACK[%p] called from %s(%lu) function %s():\n", stk, fileName, line, funcName);
     fprintf(stkerr, "\t\t\t  ERROR CODE: %d\n", err);
 
     #ifdef CANARY_PROTECT
