@@ -43,6 +43,15 @@ enum StackError
 };
 
 
+struct StackInitInfo
+{
+    const char* fileName;
+    const char* varName;
+    const char* funcName;
+    int lineNum;
+};
+
+
 /// 12 debug params
 /// @brief Basic stack struct.
 struct Stack
@@ -54,6 +63,7 @@ struct Stack
     elem_t* data; ///< Data array.
     int size;     ///< Current stack index.
     int capacity; ///< Current max size of the stack.
+    StackInitInfo info; ///< Stack initialization info.
 
     #ifdef HASH_PROTECT
     unsigned long long hash;
@@ -66,8 +76,7 @@ struct Stack
 
 
 
-
-
+#define stackInit(stk, capacity) stackInit_internal((stk), (capacity), StackInitInfo{__FILE__, #stk, __FUNCTION__, __LINE__})
 
 
 /**
@@ -93,7 +102,7 @@ void stackDump_internal(const Stack* stk, const StackError err,
  * 
  * @note Don't forget to call `stackDtor` when you're done.
  */
-StackError stackInit(Stack* stk, size_t capacity);
+StackError stackInit_internal(Stack* stk, size_t capacity, StackInitInfo info);
 
 
 /**
@@ -105,7 +114,7 @@ StackError stackInit(Stack* stk, size_t capacity);
  * 
  * @note Don't forget to call `stackDtor` when you're done.
  */
-StackError stackInit(Stack* stk);
+StackError stackInit_internal(Stack* stk, StackInitInfo info);
 
 
 /**
@@ -141,8 +150,5 @@ StackError stackDtor(Stack* stk);
 
 
 StackError setLogFile(const char* fileName);
-
-
-unsigned long long calculateStackHash(const Stack* stk);
 
 #endif

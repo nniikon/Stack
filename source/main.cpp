@@ -8,9 +8,8 @@ do                                 \
     if ((error) != NO_ERROR)       \
     {                              \
         printf("error!\n");        \
-        stackDump(&stk, NO_ERROR); \
         stackDtor(&stk);           \
-        assert(0);                 \
+        return error;              \
     }                              \
 } while (0)      
 
@@ -27,21 +26,22 @@ int main()
 
     error = stackInit(&stk, 16);
     CHECK_ERROR(error);
+    stackDump(&stk, NO_ERROR);
 
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 120; i++)
     {        
         error = stackPush(&stk, i*i);
         CHECK_ERROR(error); 
     }
-    stackDump(&stk, NO_ERROR);
 
-    for (int i = 0; i < 90; i++)
-    {
-        int a = 0;
+    for (int i = 0; i < 121; i++)
+    {        
+        elem_t a = 0;
         error = stackPop(&stk, &a);
-        CHECK_ERROR(error);
-    }
-    stackDump(&stk, NO_ERROR);
+        CHECK_ERROR(error); 
+    }    
+
+    stackDump(&stk, error);
 
     error = stackDtor(&stk);
     CHECK_ERROR(error);
