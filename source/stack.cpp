@@ -24,6 +24,17 @@ static StackError checkStackError(Stack *stk);
 static unsigned long long calculateStackHash(const Stack* stk);
 
 
+/**
+ * @brief Calculates stack.data[] hash value.
+ * 
+ * @param[in] stk Stack struct.
+ * 
+ * @return Hash value.
+ * 
+*/
+static unsigned long long calculateDataHash(const Stack* stk);
+
+
 // TODO: move to .cpp
 #ifndef RELEASE
     #define STACK_DUMP(stk, stackError) stackDump_internal((stk), (stackError), __FILE__, __LINE__, __FUNCTION__)
@@ -66,20 +77,25 @@ static unsigned long long calculateStackHash(const Stack* stk);
 #endif                                          
 
 #ifdef HASH_PROTECT
-
-    #define CHECK_HASH_RETURN_ERROR(stk)                           \
-    do                                                             \
-    {                                                              \
-        if ((stk)->hash != calculateStackHash((stk)))              \
-        {                                                          \
-            DUMP_AND_RETURN_ERROR(stk, UNREGISTERED_ACCESS_ERROR); \
-        }                                                          \
+       
+    #define CHECK_HASH_RETURN_ERROR(stk)                                  \
+    do                                                                    \
+    {                                                                     \
+        if ((stk)->structHash != calculateStackHash((stk)))               \
+        {                                                                 \
+            DUMP_AND_RETURN_ERROR(stk, UNREGISTERED_STRUCT_ACCESS_ERROR); \
+        }                                                                 \
+        if ((stk)->dataHash != calculateDataHash((stk)))                  \
+        {                                                                 \
+            DUMP_AND_RETURN_ERROR(stk, UNREGISTERED_DATA_ACCESS_ERROR);   \
+        }                                                                 \
     } while (0);
     
     #define UPDATE_HASH(stk)                                  \
     do                                                        \
     {                                                         \
-        (stk)->hash = calculateStackHash(stk);                \
+        (stk)->structHash = calculateStackHash(stk);          \
+        (stk)->dataHash   = calculateDataHash(stk);           \
     } while (0);                                              
     
 
@@ -104,11 +120,11 @@ do\
 static StackError checkStackError(Stack *stk)
 {
 #ifdef CANARY_PROTECT
-    if (stk->leftCanary  != CANARY_VALUE) return DEAD_CANARY_ERROR;
-    if (stk->rightCanary != CANARY_VALUE) return DEAD_CANARY_ERROR;
+    if (stk->leftCanary  != CANARY_VALUE) return DEAD_STRUCT_CANARY_ERROR;
+    if (stk->rightCanary != CANARY_VALUE) return DEAD_STRUCT_CANARY_ERROR;
 
-    if (*(canary_t*)((size_t)stk->data - sizeof(canary_t)) != CANARY_VALUE) return DEAD_CANARY_ERROR;
-    if (*(canary_t*)(stk->data + stk->capacity) != CANARY_VALUE)            return DEAD_CANARY_ERROR;
+    if (*(canary_t*)((size_t)stk->data - sizeof(canary_t)) != CANARY_VALUE) return DEAD_DATA_CANARY_ERROR;
+    if (*(canary_t*)(stk->data + stk->capacity) != CANARY_VALUE)            return DEAD_DATA_CANARY_ERROR;
 #endif
     if (stk->capacity < 0)                return NEGATIVE_CAPACITY_ERROR;
     if (stk->size     < 0)                return NEGATIVE_SIZE_ERROR;
@@ -123,9 +139,11 @@ static StackError checkStackError(Stack *stk)
 static StackError increaseCapacity(Stack* stk, const float coef)
 {
     CHECK_DUMP_AND_RETURN_ERROR(stk);
+
     ASSERT_ERROR(stk == NULL,     STRUCT_NULL_ERROR);
     ASSERT_ERROR(stk->data == NULL, DATA_NULL_ERROR);
 
+    CHECK_HASH_RETURN_ERROR(stk);
 
     stk->capacity = (int)((float)stk->capacity * coef);
 
@@ -196,14 +214,13 @@ StackError stackInit_internal(Stack* stk, size_t capacity, StackInitInfo info)
     CHECK_DUMP_AND_RETURN_ERROR(stk);
     if (stk->data == NULL) return DATA_NULL_ERROR;
 
-    #ifdef HASH_PROTECT
-    stk->hash = calculateStackHash(stk);
-    #endif
 
     #ifndef RELEASE
     for (int i = 0; i < stk->capacity; i++)
         stk->data[i] = POISON;
     #endif
+
+    UPDATE_HASH(stk);
 
     return NO_ERROR;
 }
@@ -217,11 +234,12 @@ StackError stackInit_internal(Stack* stk, StackInitInfo info)
 
 StackError stackPush(Stack* stk, const elem_t elem)
 {
-    CHECK_HASH_RETURN_ERROR(stk);
     CHECK_DUMP_AND_RETURN_ERROR(stk);
 
     ASSERT_ERROR(stk == NULL, DATA_NULL_ERROR);
 
+    CHECK_HASH_RETURN_ERROR(stk);
+    
     if (stk->size >= stk->capacity)
     {
         StackError error = increaseCapacity(stk, STACK_CAPACITY_MULTIPLIER);
@@ -237,12 +255,13 @@ StackError stackPush(Stack* stk, const elem_t elem)
 
 StackError stackPop(Stack* stk, elem_t* elem)
 {
-    CHECK_HASH_RETURN_ERROR(stk);
     CHECK_DUMP_AND_RETURN_ERROR(stk);
 
     ASSERT_ERROR(elem == NULL, ELEM_NULL_ERROR);
     ASSERT_ERROR(stk->data == NULL, DATA_NULL_ERROR);
     ASSERT_ERROR(stk->size <= 0, POP_OUT_OF_RANGE_ERROR); 
+    
+    CHECK_HASH_RETURN_ERROR(stk);
 
     // If the size is STACK_CAPACITY_MULTIPLIER^2 smaller, than the capacity,...
     if (stk->size <= (int)((float)stk->capacity / (STACK_CAPACITY_MULTIPLIER * STACK_CAPACITY_MULTIPLIER)))
@@ -296,9 +315,9 @@ void stackDump_internal(const Stack* stk, const StackError err,
                const char* fileName, const size_t line, const char* funcName)
 {
     fprintf(stkerr, "----------------------------------------------------------------\n");
-    fprintf(stkerr, "\"%s\"[%p] was initialized in %s function %s(%d)\n",
+    fprintf(stkerr, "%s[%p] was initialized in %s function %s(%d)\n",
                      stk->info.varName, stk, stk->info.fileName, stk->info.funcName, stk->info.lineNum);
-    fprintf(stkerr, "\t\t\t\t\t   called from %s(%lu) function %s():\n",
+    fprintf(stkerr, "\tcalled from %s(%lu) function %s():\n",
                      fileName, line, funcName);
     fprintf(stkerr, "\t\t\t  ERROR CODE: %d\n", err);
 
@@ -313,10 +332,10 @@ void stackDump_internal(const Stack* stk, const StackError err,
 
 
     #ifdef CANARY_PROTECT
-    fprintf(stkerr, "\t\t leftCanary:" CANARY_FORMAT "\n", *(canary_t*)((size_t)stk->data - sizeof(canary_t)));
     #endif
-    if (err != NEGATIVE_CAPACITY_ERROR)
+    if (err != NEGATIVE_CAPACITY_ERROR && err != UNREGISTERED_DATA_ACCESS_ERROR && err != SIZE_CAPACITY_ERROR)
     {
+        fprintf(stkerr, "\t\t leftCanary:" CANARY_FORMAT "\n", *(canary_t*)((size_t)stk->data - sizeof(canary_t)));
         for (int i = 0; i < stk->capacity; i++)
         {
             // <(int)log10(stk->capacity) + 1> is the amount of digits in a number.
@@ -357,9 +376,20 @@ static unsigned long long calculateStackHash(const Stack* stk)
 {
     assert(stk);
     unsigned long long hash = 0ull;
-    hash += calculateHash((const char*)stk->data, stk->size * sizeof(elem_t));
+
     size_t stackSize = sizeof(&(stk->data)) + sizeof(stk->size) + sizeof(stk->capacity);
     hash += calculateHash((const char*)(&(stk->data)), stackSize);
+
+    return hash;
+}
+
+
+static unsigned long long calculateDataHash(const Stack* stk)
+{
+    assert(stk);
+    unsigned long long hash = 0ull;
+
+    hash += calculateHash((const char*)stk->data, stk->size * sizeof(elem_t));
 
     return hash;
 }

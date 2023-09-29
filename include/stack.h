@@ -28,18 +28,20 @@ static const float STACK_CAPACITY_MULTIPLIER = 2.0;
 /// @brief Enum defining possible errors in a stack.
 enum StackError
 {
-    NO_ERROR,                  ///< No error occurred.
-    DATA_NULL_ERROR,           ///< Data is NULL, indicating an uninitialized stack.
-    ELEM_NULL_ERROR,           ///< Elem is NULL, which is unexpected.
-    STRUCT_NULL_ERROR,         ///< Struct is NULL, indicating an uninitialized stack structure.
-    NEGATIVE_SIZE_ERROR,       ///< Size cannot be negative.
-    NEGATIVE_CAPACITY_ERROR,   ///< Capacity cannot be negative.
-    SIZE_CAPACITY_ERROR,       ///< Size should not exceed capacity.
-    MEMORY_ALLOCATION_ERROR,   ///< Error during memory allocation (malloc or realloc).
-    POP_OUT_OF_RANGE_ERROR,    ///< Attempted pop operation on an empty stack.
-    OPENING_FILE_ERROR,        ///< Failed to open a file.
-    DEAD_CANARY_ERROR,         ///< Canary value indicates a possible stack attack.
-    UNREGISTERED_ACCESS_ERROR, ///< Hash mismatch due to unauthorized data manipulation.
+    NO_ERROR,                         ///< No error occurred.
+    DATA_NULL_ERROR,                  ///< Data is NULL, indicating an uninitialized stack.
+    ELEM_NULL_ERROR,                  ///< Elem is NULL, which is unexpected.
+    STRUCT_NULL_ERROR,                ///< Struct is NULL, indicating an uninitialized stack structure.
+    NEGATIVE_SIZE_ERROR,              ///< Size cannot be negative.
+    NEGATIVE_CAPACITY_ERROR,          ///< Capacity cannot be negative.
+    SIZE_CAPACITY_ERROR,              ///< Size should not exceed capacity.
+    MEMORY_ALLOCATION_ERROR,          ///< Error during memory allocation (malloc or realloc).
+    POP_OUT_OF_RANGE_ERROR,           ///< Attempted pop operation on an empty stack.
+    OPENING_FILE_ERROR,               ///< Failed to open a file.
+    DEAD_STRUCT_CANARY_ERROR,         ///< Struct canary value indicates a possible stack attack.
+    DEAD_DATA_CANARY_ERROR,           ///< Data canary value indicates a possible stack attack.
+    UNREGISTERED_STRUCT_ACCESS_ERROR, ///< Struct hash mismatch due to unauthorized data manipulation.
+    UNREGISTERED_DATA_ACCESS_ERROR,   ///< Data hash mismatch due to unauthorized data manipulation.
 };
 
 
@@ -66,7 +68,8 @@ struct Stack
     StackInitInfo info; ///< Stack initialization info.
 
     #ifdef HASH_PROTECT
-    unsigned long long hash;
+    unsigned long long dataHash;
+    unsigned long long structHash;
     #endif
 
     #ifdef CANARY_PROTECT
