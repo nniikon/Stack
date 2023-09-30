@@ -4,6 +4,12 @@
 static FILE* stkerr = stderr;
 
 
+static const char* ErrorString[] = 
+{
+    ERROR_NAME(GENERATE_STRING)
+};
+
+
 /**
  * @brief Check stack class for errors.
  * 
@@ -151,7 +157,11 @@ static StackError increaseCapacity(Stack* stk, const float coef)
 
     // Move the data to the originally allocated place.
     stk->data = (elem_t*)(size_t(stk->data) - sizeof(canary_t));
-    stk->data = (elem_t*)realloc(stk->data, stk->capacity * sizeof(elem_t) + 2 * sizeof(canary_t));
+
+    elem_t* temp = (elem_t*)realloc(stk->data, stk->capacity * sizeof(elem_t) + 2 * sizeof(canary_t));
+    if (temp == NULL) return MEMORY_ALLOCATION_ERROR;
+    stk->data = temp;
+
     ((canary_t*)stk->data)[0] = CANARY_VALUE;
 
     // Move the data pointer to the real data.
@@ -160,8 +170,10 @@ static StackError increaseCapacity(Stack* stk, const float coef)
 
     #else
 
-    stk->data = (elem_t*)realloc(stk->data, sizeof(elem_t) * stk->capacity);
-    
+    elem_t* temp = (elem_t*)realloc(stk->data, sizeof(elem_t) * stk->capacity);
+    if (temp == NULL) return MEMORY_ALLOCATION_ERROR;
+     
+    stk->data = temp;
     #endif
 
 
@@ -234,11 +246,12 @@ StackError stackInit_internal(Stack* stk, StackInitInfo info)
 
 StackError stackPush(Stack* stk, const elem_t elem)
 {
+    CHECK_HASH_RETURN_ERROR(stk);
+    
     CHECK_DUMP_AND_RETURN_ERROR(stk);
 
     ASSERT_ERROR(stk == NULL, DATA_NULL_ERROR);
 
-    CHECK_HASH_RETURN_ERROR(stk);
     
     if (stk->size >= stk->capacity)
     {
@@ -264,7 +277,8 @@ StackError stackPop(Stack* stk, elem_t* elem)
     CHECK_HASH_RETURN_ERROR(stk);
 
     // If the size is STACK_CAPACITY_MULTIPLIER^2 smaller, than the capacity,...
-    if (stk->size <= (int)((float)stk->capacity / (STACK_CAPACITY_MULTIPLIER * STACK_CAPACITY_MULTIPLIER)))
+    if (stk->size <= (int)((float)stk->capacity / (STACK_CAPACITY_MULTIPLIER * STACK_CAPACITY_MULTIPLIER)) 
+        && stk->size >= STACK_SIZE_DEFAULT)
         increaseCapacity(stk, 1.0/STACK_CAPACITY_MULTIPLIER); //... decrease the capacity.
 
     #ifndef RELEASE
@@ -314,49 +328,80 @@ StackError stackDtor(Stack* stk)
 void stackDump_internal(const Stack* stk, const StackError err,
                const char* fileName, const size_t line, const char* funcName)
 {
-    fprintf(stkerr, "----------------------------------------------------------------\n");
-    fprintf(stkerr, "%s[%p] was initialized in %s function %s(%d)\n",
-                     stk->info.varName, stk, stk->info.fileName, stk->info.funcName, stk->info.lineNum);
-    fprintf(stkerr, "\tcalled from %s(%lu) function %s():\n",
-                     fileName, line, funcName);
-    fprintf(stkerr, "\t\t\t  ERROR CODE: %d\n", err);
+    #define print(...) fprintf(stkerr, __VA_ARGS__)
+    #define printColor(color, str,...) fprintf(stkerr, "<font color=" #color ">" str "</font>", __VA_ARGS__)
+
+
+    print("<pre>");
+    print("----------------------------------------------------------------\n");
+
+    printColor(purple, "%s[%p] ", stk->info.varName, stk);
+    print("was initialized in ");
+    printColor(purple, "%s ", stk->info.fileName);
+    print("function ");
+    printColor(purple, "%s(%d)\n", stk->info.funcName, stk->info.lineNum);
+    print("\tcalled from ");
+    printColor(purple, "%s ", fileName);
+    print("function ");
+    printColor(purple, "%s(%lu):\n", funcName, line);
+    
+    if (err == NO_ERROR)
+        printColor(green, "\t\t\t  ERROR CODE: %s\n", ErrorString[err]);
+    else
+        printColor(red, "\t\t\t  ERROR CODE: %s\n", ErrorString[err]);
 
     #ifdef CANARY_PROTECT
-    fprintf(stkerr, "\t *leftCanary:" CANARY_FORMAT "\n", stk->leftCanary);
+    if (stk->leftCanary == CANARY_VALUE)
+        printColor(green ,"\t *leftCanary:" CANARY_FORMAT "\n", stk->leftCanary);
+    else
+        printColor(red ,"\t *leftCanary:" CANARY_FORMAT "\n", stk->leftCanary);
     #endif
 
-    fprintf(stkerr, "\t *size = %d      \n", stk->size);
-    fprintf(stkerr, "\t *capacity = %d  \n", stk->capacity);
-    fprintf(stkerr, "\t *data[%p]:      \n", stk->data);
-
-
-
-    #ifdef CANARY_PROTECT
-    #endif
-    if (err != NEGATIVE_CAPACITY_ERROR && err != UNREGISTERED_DATA_ACCESS_ERROR && err != SIZE_CAPACITY_ERROR)
+    print("\t *size = %d      \n", stk->size);
+    print("\t *capacity = %d  \n", stk->capacity);
+    print("\t *data[%p]:      \n", stk->data);
+    
+    
+    if (err != NEGATIVE_CAPACITY_ERROR && err != UNREGISTERED_STRUCT_ACCESS_ERROR && err != SIZE_CAPACITY_ERROR)
     {
-        fprintf(stkerr, "\t\t leftCanary:" CANARY_FORMAT "\n", *(canary_t*)((size_t)stk->data - sizeof(canary_t)));
+        #ifdef CANARY_PROTECT
+        canary_t leftCanary = *(canary_t*)((size_t)stk->data - sizeof(canary_t));
+        if (leftCanary == CANARY_VALUE)
+            printColor(green ,"\t\t *leftCanary:" CANARY_FORMAT "\n", leftCanary);
+        else
+            printColor(red ,"\t\t *leftCanary:" CANARY_FORMAT "\n", leftCanary);
+        #endif
         for (int i = 0; i < stk->capacity; i++)
         {
             // <(int)log10(stk->capacity) + 1> is the amount of digits in a number.
-            if (i == stk->size)              fprintf(stkerr, "\t\t> ");
-            else if (stk->data[i] == POISON) fprintf(stkerr, "\t\tO ");
-            else                             fprintf(stkerr, "\t\t@ ");
+            if (i == stk->size)              printColor("blue", "%s", "\t\t> ");
+            else if (stk->data[i] == POISON) print("\t\tO ");
+            else                             print("\t\t@ ");
 
-            fprintf(stkerr, "data[%.*d] = ", (int)log10(stk->capacity) + 1, i);
-            if (stk->data[i] == POISON) fprintf(stkerr, "POISON");
-            else                        fprintf(stkerr, ELEM_FORMAT, stk->data[i]);
+            print("data[%.*d] = ", (int)log10(stk->capacity) + 1, i);
+            if (stk->data[i] == POISON) print("POISON");
+            else                        print(ELEM_FORMAT, stk->data[i]);
 
-            if (i == stk->size)  fprintf(stkerr, " <\n");
-            else                 fprintf(stkerr, "  \n");
+            if (i == stk->size)  printColor("blue", "%s", " <\n");
+            else                 print("  \n");
         }
-        #ifdef CANARY_PROTECT
-        fprintf(stkerr, "\t\t RightCanary:" CANARY_FORMAT "\n", *(canary_t*)(stk->data + stk->capacity));
+        #ifdef CANARY_PROTECT        
+        canary_t rightCanary = *(canary_t*)(stk->data + stk->capacity);
+        if (rightCanary == CANARY_VALUE)
+            printColor(green ,"\t\t *rightCanary:" CANARY_FORMAT "\n", rightCanary);
+        else
+            printColor(red ,"\t\t *rightCanary:" CANARY_FORMAT "\n", rightCanary);
         #endif
    }
     #ifdef CANARY_PROTECT
-    fprintf(stkerr, "\t *RightCanary:" CANARY_FORMAT "\n", stk->rightCanary);
+    if (stk->rightCanary == CANARY_VALUE)
+        printColor(green ,"\t *rightCanary:" CANARY_FORMAT "\n", stk->rightCanary);
+    else
+        printColor(red ,"\t *rightCanary:" CANARY_FORMAT "\n", stk->rightCanary);
     #endif
+
+    #undef print
+    #undef print_color
 }
 
 
