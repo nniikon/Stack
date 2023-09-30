@@ -212,8 +212,6 @@ static StackError increaseCapacity(Stack* stk, const float coef)
 
 StackError stackInit_internal(Stack* stk, size_t capacity, StackInitInfo info)
 {
-    ASSERT_ERROR(stk == NULL, DATA_NULL_ERROR);
-
     stk->capacity = (int)capacity;
     stk->size = 0;
     stk->info = info;
@@ -259,12 +257,11 @@ StackError stackInit_internal(Stack* stk, StackInitInfo info)
 
 StackError stackPush(Stack* stk, const elem_t elem)
 {
-    CHECK_HASH_RETURN_ERROR(stk);
-    
     CHECK_DUMP_AND_RETURN_ERROR(stk);
 
     ASSERT_ERROR(stk == NULL, DATA_NULL_ERROR);
 
+    CHECK_HASH_RETURN_ERROR(stk);
     
     if (stk->size >= stk->capacity)
     {
@@ -313,9 +310,6 @@ StackError stackPop(Stack* stk, elem_t* elem)
 
 StackError stackDtor(Stack* stk)
 {
-    ASSERT_ERROR(stk->data == NULL,   DATA_NULL_ERROR);
-    ASSERT_ERROR(stk       == NULL, STRUCT_NULL_ERROR);
-
     StackError error = checkStackError(stk);
     if (error != NO_ERROR)
     {
