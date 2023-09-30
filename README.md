@@ -16,8 +16,6 @@ This is a simple C program that implements a stack data structure with added sec
   - [setLogFile](#setlogfile)
 - [Error Codes](#error-codes)
 - [Examples](#examples)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Introduction
 
@@ -37,7 +35,7 @@ To use this stack algorithm in your C project, follow these steps:
 
 3. Implement the functions according to your requirements.
 
-4. Compile your project, ensuring that you link it with the `stack.c` source file.
+4. Compile your project, ensuring that you link it with the `stack.cpp` source file.
 
 ## Usage
 
@@ -86,29 +84,30 @@ Here's a brief overview of how to use the provided functions in your C program:
 
 ## Functions
 
-### stackDump
+### stackDump()
 
 ```c
 #define stackDump(stk, stackError) stackDump_internal((stk), (stackError), __FILE__, __LINE__, __FUNCTION__)
 ```
 
-- Description: Dump all relevant stack information along with the given error to the log file (stderr by default).
+- Description: dumps all relevant stack information along with the given error to the log file (stderr by default).
 - Parameters:
   - `stk` - The stack struct.
   - `stackError` - The error code.
+- Note: you don't need to call `stackDump()` on error, it's done automatically.
 
-### stackInit
+### stackInit()
 
 ```c
 #define stackInit(stk) stackInit_internal((stk), StackInitInfo{__FILE__, #stk, __FUNCTION__, __LINE__})
 ```
 
-- Description: Initializes a stack structure.
+- Description: initializes a stack structure.
 - Parameters:
   - `stk` - Stack struct.
 - Returns: Error code.
 
-### stackPush
+### stackPush()
 
 ```c
 StackError stackPush(Stack* stk, const elem_t elem);
@@ -120,7 +119,7 @@ StackError stackPush(Stack* stk, const elem_t elem);
   - `elem` - The element to push.
 - Returns: Error code.
 
-### stackPop
+### stackPop()
 
 ```c
 StackError stackPop(Stack* stk, elem_t* elem);
@@ -132,7 +131,7 @@ StackError stackPop(Stack* stk, elem_t* elem);
   - `elem` - Pointer to the variable where the popped element will be stored.
 - Returns: Error code.
 
-### stackDtor
+### stackDtor()
 
 ```c
 StackError stackDtor(Stack* stk);
@@ -143,7 +142,7 @@ StackError stackDtor(Stack* stk);
   - `stk` - Stack struct.
 - Returns: Error code.
 
-### setLogFile
+### setLogFile()
 
 ```c
 StackError setLogFile(const char* fileName);
