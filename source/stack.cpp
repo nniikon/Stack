@@ -304,20 +304,33 @@ StackError stackPop(Stack* stk, elem_t* elem)
 }
 
 
+#ifdef CANARY_PROTECT
+    #define FREE_DATA(stk) free((char*)stk->data - sizeof(canary_t))
+#else
+    #define FREE_DATA(stk) free((char*)stk->data)
+#endif
+
+
 StackError stackDtor(Stack* stk)
 {
-    ASSERT_ERROR(stk       == NULL, STRUCT_NULL_ERROR);
     ASSERT_ERROR(stk->data == NULL,   DATA_NULL_ERROR);
+    ASSERT_ERROR(stk       == NULL, STRUCT_NULL_ERROR);
 
-    free(stk->data);
+    StackError error = checkStackError(stk);
+    if (error != NO_ERROR)
+    {
+        FREE_DATA(stk);
+        return error;
+    }
 
-    CHECK_DUMP_AND_RETURN_ERROR(stk);
-    CHECK_HASH_RETURN_ERROR(stk);
-    
+    #ifndef RELEASE
+
     for (int i = 0; i < stk->capacity; i++)
     {
         stk->data[i] = POISON;
     }
+
+    #endif
 
     return NO_ERROR;
 }
