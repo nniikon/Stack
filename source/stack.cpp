@@ -9,7 +9,6 @@ static const char* ErrorString[] =
     ERROR_NAME(GENERATE_STRING)
 };
 
-
 /**
  * @brief Check stack class for errors.
  * 
@@ -41,6 +40,9 @@ static unsigned long long calculateStackHash(const Stack* stk);
 static unsigned long long calculateDataHash(const Stack* stk);
 
 
+
+
+
 // TODO: move to .cpp
 #ifndef RELEASE
     #define STACK_DUMP(stk, stackError) stackDump_internal((stk), (stackError), __FILE__, __LINE__, __FUNCTION__)
@@ -65,6 +67,8 @@ static unsigned long long calculateDataHash(const Stack* stk);
      * 
      * @param[in]  stk   The stack structure to be dumped.
      * @param[in]  error The error to be dumped.
+     * 
+     * @note Does nothing if `error` = `NO_ERROR`.
      */
     #define DUMP_AND_RETURN_ERROR(stk, error)                  \
     do                                                         \
@@ -81,6 +85,10 @@ static unsigned long long calculateDataHash(const Stack* stk);
     #define DUMP_AND_RETURN_ERROR       ;
     #define STACK_DUMP                  ;
 #endif                                          
+
+
+
+
 
 #ifdef HASH_PROTECT
        
@@ -111,6 +119,9 @@ static unsigned long long calculateDataHash(const Stack* stk);
 #endif
 
 
+
+
+
 #define ASSERT_ERROR(condition, error)\
 do\
 {\
@@ -120,6 +131,8 @@ do\
         return error;\
     }\
 } while (0)
+
+
 
 
 
@@ -293,35 +306,20 @@ StackError stackPop(Stack* stk, elem_t* elem)
 
 StackError stackDtor(Stack* stk)
 {
-    #ifdef RELEASE
-
     ASSERT_ERROR(stk       == NULL, STRUCT_NULL_ERROR);
     ASSERT_ERROR(stk->data == NULL,   DATA_NULL_ERROR);
 
     free(stk->data);
 
-    return NO_ERROR;
-
-    #else
-
-    StackError error = checkStackError(stk);
+    CHECK_DUMP_AND_RETURN_ERROR(stk);
+    CHECK_HASH_RETURN_ERROR(stk);
     
     for (int i = 0; i < stk->capacity; i++)
     {
         stk->data[i] = POISON;
     }
-    
-    if (error != NO_ERROR)
-    {
-        STACK_DUMP(stk, error);
-        free(stk->data);
-        return error;
-    }
-
 
     return NO_ERROR;
-
-    #endif
 }
 
 

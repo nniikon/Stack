@@ -100,7 +100,6 @@ struct Stack
 
 
 
-#define stackInit(stk) stackInit_internal((stk), StackInitInfo{__FILE__, #stk, __FUNCTION__, __LINE__})
 
 
 /**
@@ -116,6 +115,7 @@ struct Stack
 void stackDump_internal(const Stack* stk, const StackError err,
                const char* fileName, const size_t line, const char* funcName);
 
+
 /**
  * @brief Initializes a stack structure.
  * 
@@ -124,20 +124,11 @@ void stackDump_internal(const Stack* stk, const StackError err,
  * 
  * @return Error code.
  * 
- * @note Don't forget to call `stackDtor` when you're done.
+ * @note Don't forget to call `stackDtor` when you're done to free the allocated memory.
  */
+#define stackInit(stk) stackInit_internal((stk), StackInitInfo{__FILE__, #stk, __FUNCTION__, __LINE__})
+
 StackError stackInit_internal(Stack* stk, size_t capacity, StackInitInfo info);
-
-
-/**
- * @brief Initializes a stack structure.
- * 
- * @param[out] stk Stack struct.
- * 
- * @return Error code.
- * 
- * @note Don't forget to call `stackDtor` when you're done.
- */
 StackError stackInit_internal(Stack* stk, StackInitInfo info);
 
 
@@ -155,8 +146,8 @@ StackError stackPush(Stack* stk, const elem_t elem);
 /**
  * @brief Puts another element into the stack, allocating more memory if needed.
  * 
- * @param[in] The element
- * @param[out] The stack
+ * @param[in] elem The element
+ * @param[out] stk The stack
  * 
  * @return Error code.
 */
@@ -172,7 +163,13 @@ StackError stackPop(Stack* stk, elem_t* elem);
 */
 StackError stackDtor(Stack* stk);
 
-
+/**
+ * @brief Automatically creates a log file by it's name.
+ * 
+ * @param[in] fileName File name.
+ * 
+ * @note Don't forget to call `stackDtor` when you're done to close the file.
+*/
 StackError setLogFile(const char* fileName);
 
 #endif
