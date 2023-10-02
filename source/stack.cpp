@@ -325,12 +325,12 @@ StackError stackDtor(Stack* stk)
     ASSERT_ERROR(stk->data == NULL,   DATA_NULL_ERROR);
     ASSERT_ERROR(stk       == NULL, STRUCT_NULL_ERROR);
 
-    StackError error = checkStackError(stk);
-    if (error != NO_ERROR)
-    {
-        FREE_DATA(stk);
-        return error;
-    }
+    CHECK_STACK_HASH_RETURN_ERROR(stk);
+    CHECK_DUMP_AND_RETURN_ERROR(stk);
+
+    FREE_DATA(stk);
+
+    CHECK_DATA_HASH_RETURN_ERROR(stk);
 
     #ifndef RELEASE
 
