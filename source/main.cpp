@@ -11,6 +11,14 @@
     }                              \
 }
 
+/*
+TODO:
+- config.h + change readme
+- better hash function
+- better destructor
+- protect from double init / double 
+*/
+
 int main()
 {    
     
@@ -22,7 +30,7 @@ int main()
 
     error = stackInit(&stk);
     CHECK_ERROR(error);
-
+    
     error = stackPush(&stk, 1);
     CHECK_ERROR(error); 
 

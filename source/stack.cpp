@@ -92,18 +92,24 @@ static unsigned long long calculateDataHash(const Stack* stk);
 
 #ifdef HASH_PROTECT
        
-    #define CHECK_HASH_RETURN_ERROR(stk)                                  \
+    #define CHECK_STACK_HASH_RETURN_ERROR(stk)                            \
     do                                                                    \
     {                                                                     \
         if ((stk)->structHash != calculateStackHash((stk)))               \
         {                                                                 \
             DUMP_AND_RETURN_ERROR(stk, UNREGISTERED_STRUCT_ACCESS_ERROR); \
         }                                                                 \
+    } while (0);
+    
+    #define CHECK_DATA_HASH_RETURN_ERROR(stk)                             \
+    do                                                                    \
+    {                                                                     \
         if ((stk)->dataHash != calculateDataHash((stk)))                  \
         {                                                                 \
             DUMP_AND_RETURN_ERROR(stk, UNREGISTERED_DATA_ACCESS_ERROR);   \
         }                                                                 \
     } while (0);
+    
     
     #define UPDATE_HASH(stk)                                  \
     do                                                        \
@@ -157,12 +163,12 @@ static StackError checkStackError(Stack *stk)
 
 static StackError increaseCapacity(Stack* stk, const float coef)
 {
-    CHECK_DUMP_AND_RETURN_ERROR(stk);
+    CHECK_STACK_HASH_RETURN_ERROR(stk);
 
     ASSERT_ERROR(stk == NULL,     STRUCT_NULL_ERROR);
     ASSERT_ERROR(stk->data == NULL, DATA_NULL_ERROR);
 
-    CHECK_HASH_RETURN_ERROR(stk);
+    CHECK_DATA_HASH_RETURN_ERROR(stk);
 
     stk->capacity = (int)((float)stk->capacity * coef);
 
@@ -259,12 +265,13 @@ StackError stackInit_internal(Stack* stk, StackInitInfo info)
 
 StackError stackPush(Stack* stk, const elem_t elem)
 {
-    CHECK_HASH_RETURN_ERROR(stk);
-    
+    CHECK_STACK_HASH_RETURN_ERROR(stk);
+
     CHECK_DUMP_AND_RETURN_ERROR(stk);
 
     ASSERT_ERROR(stk == NULL, DATA_NULL_ERROR);
 
+    CHECK_DATA_HASH_RETURN_ERROR(stk);    
     
     if (stk->size >= stk->capacity)
     {
@@ -281,13 +288,15 @@ StackError stackPush(Stack* stk, const elem_t elem)
 
 StackError stackPop(Stack* stk, elem_t* elem)
 {
+    CHECK_STACK_HASH_RETURN_ERROR(stk);
+    
     CHECK_DUMP_AND_RETURN_ERROR(stk);
 
     ASSERT_ERROR(elem == NULL, ELEM_NULL_ERROR);
     ASSERT_ERROR(stk->data == NULL, DATA_NULL_ERROR);
     ASSERT_ERROR(stk->size <= 0, POP_OUT_OF_RANGE_ERROR); 
     
-    CHECK_HASH_RETURN_ERROR(stk);
+    CHECK_DATA_HASH_RETURN_ERROR(stk);
 
     // If the size is STACK_CAPACITY_MULTIPLIER^2 smaller, than the capacity,...
     if (stk->size <= (int)((float)stk->capacity / (STACK_CAPACITY_MULTIPLIER * STACK_CAPACITY_MULTIPLIER)) 
