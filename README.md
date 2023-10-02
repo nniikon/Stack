@@ -14,6 +14,7 @@ This is a simple C program that implements a stack data structure with added sec
   - [stackPop](#stackpop)
   - [stackDtor](#stackdtor)
   - [setLogFile](#setlogfile)
+- [Settings](#settings)
 - [Error Codes](#error-codes)
 - [Examples](#examples)
 
@@ -153,6 +154,54 @@ StackError setLogFile(const char* fileName);
   - `fileName` - The name of the log file.
 - Note: Don't forget to call `stackDtor` when you're done to close the file.
 
+## Settings
+
+This section describes the configurable settings and constants in the code:
+
+### Release Mode
+
+- `RELEASE` mode optimizes the code for performance.
+- In this mode, unused hash values are not filled with poison.
+- Validation is performed only on essential parameters.
+
+### Canary Protection
+
+- `CANARY_PROTECT` enhances security by using canary values to protect the stack and data.
+- While enabling canary protection, keep in mind that it slightly increases the execution time of every stack operation.
+- It may also require a slightly larger amount of memory due to the additional canary values.
+
+### Hash Protection
+
+- `HASH_PROTECT` strengthens security using a hash function to protect the stack and data.
+- Enabling hash protection significantly increases the execution time of every stack operation.
+
+### Data Types
+
+- `elem_t` is the element type used in the stack.
+- `canary_t` is the canary type used for data protection.
+
+### Format Specifiers
+
+- `ELEM_FORMAT` defines the format specifier for printing elements using `printf()`.
+- `CANARY_FORMAT` defines the format specifier for printing canary values.
+
+### Poison Value
+
+- `POISON` is the value used to mark uninitialized elements in the stack.
+
+### Canary Value
+
+- `CANARY_VALUE` is the canary value used to protect data integrity.
+
+### Default Stack Capacity
+
+- `STACK_SIZE_DEFAULT` defines the default minimum capacity that the stack can have.
+
+### Stack Capacity Multiplier
+
+- `STACK_CAPACITY_MULTIPLIER` specifies the multiplier used to increase the capacity of the stack when needed.
+
+
 ## Error Codes
 
 The functions in this stack algorithm may return the following error codes:
@@ -174,4 +223,4 @@ The functions in this stack algorithm may return the following error codes:
 
 ## Examples
 
-You can find usage examples and additional information in the provided code files and documentation.
+You can find usage examples and additional information in the provided code files and documentation. (work in progress)
