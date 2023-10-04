@@ -20,6 +20,7 @@
         func(MEMORY_ALLOCATION_ERROR)\
         func(POP_OUT_OF_RANGE_ERROR)\
         func(OPENING_FILE_ERROR)\
+        func(CLOSING_FILE_ERROR)\
         func(DEAD_STRUCT_CANARY_ERROR)\
         func(DEAD_DATA_CANARY_ERROR)\
         func(UNREGISTERED_STRUCT_ACCESS_ERROR)\
@@ -28,28 +29,32 @@
 #define GENERATE_ENUM(ENUM) ENUM,
 #define GENERATE_STRING(STRING) #STRING,
 
-// NO_ERROR,                         ///< No error occurred.
-// DATA_NULL_ERROR,                  ///< Data is NULL, indicating an uninitialized stack.
-// ELEM_NULL_ERROR,                  ///< Elem is NULL, which is unexpected.
-// STRUCT_NULL_ERROR,                ///< Struct is NULL, indicating an uninitialized stack structure.
-// NEGATIVE_SIZE_ERROR,              ///< Size cannot be negative.
-// NEGATIVE_CAPACITY_ERROR,          ///< Capacity cannot be negative.
-// SIZE_CAPACITY_ERROR,              ///< Size should not exceed capacity.
-// MEMORY_ALLOCATION_ERROR,          ///< Error during memory allocation (malloc or realloc).
-// POP_OUT_OF_RANGE_ERROR,           ///< Attempted pop operation on an empty stack.
-// OPENING_FILE_ERROR,               ///< Failed to open a file.
-// DEAD_STRUCT_CANARY_ERROR,         ///< Struct canary value indicates a possible stack attack.
-// DEAD_DATA_CANARY_ERROR,           ///< Data canary value indicates a possible stack attack.
-// UNREGISTERED_STRUCT_ACCESS_ERROR, ///< Struct hash mismatch due to unauthorized data manipulation.
-// UNREGISTERED_DATA_ACCESS_ERROR,   ///< Data hash mismatch due to unauthorized data manipulation.
+// NO_ERROR,                         < No error occurred.
+// DATA_NULL_ERROR,                  < Data is NULL, indicating an uninitialized stack.
+// ELEM_NULL_ERROR,                  < Elem is NULL, which is unexpected.
+// STRUCT_NULL_ERROR,                < Struct is NULL, indicating an uninitialized stack structure.
+// NEGATIVE_SIZE_ERROR,              < Size cannot be negative.
+// NEGATIVE_CAPACITY_ERROR,          < Capacity cannot be negative.
+// SIZE_CAPACITY_ERROR,              < Size should not exceed capacity.
+// MEMORY_ALLOCATION_ERROR,          < Error during memory allocation (malloc or realloc).
+// POP_OUT_OF_RANGE_ERROR,           < Attempted pop operation on an empty stack.
+// OPENING_FILE_ERROR,               < Failed to open a file.
+// DEAD_STRUCT_CANARY_ERROR,         < Struct canary value indicates a possible stack attack.
+// DEAD_DATA_CANARY_ERROR,           < Data canary value indicates a possible stack attack.
+// UNREGISTERED_STRUCT_ACCESS_ERROR, < Struct hash mismatch due to unauthorized data manipulation.
+// UNREGISTERED_DATA_ACCESS_ERROR,   < Data hash mismatch due to unauthorized data manipulation.
 
-
+/**
+ * @brief Error codes returned by stack functions.
+*/
 enum StackError
 {
     ERROR_NAME(GENERATE_ENUM)
 };
 
-
+/**
+ * @brief Stack initialization info.
+*/
 struct StackInitInfo
 {
     const char* fileName;
@@ -60,8 +65,10 @@ struct StackInitInfo
 
 
 
-/// 12 debug params
-/// @brief Basic stack struct.
+/**
+ * @struct
+ * @brief Stack struct.
+*/
 struct Stack
 {
     #ifdef CANARY_PROTECT
@@ -113,8 +120,8 @@ void stackDump_internal(const Stack* stk, const StackError err,
  */
 #define stackInit(stk) stackInit_internal((stk), StackInitInfo{__FILE__, #stk, __FUNCTION__, __LINE__})
 
-StackError stackInit_internal(Stack* stk, size_t capacity, StackInitInfo info);
 StackError stackInit_internal(Stack* stk, StackInitInfo info);
+StackError stackInit_internal(Stack* stk, size_t capacity, StackInitInfo info);
 
 
 /**

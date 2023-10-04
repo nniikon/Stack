@@ -13,10 +13,9 @@
 
 /*
 TODO:
-- config.h + change readme
 - better hash function
-- better destructor
 - protect from double init / double 
+- add: stack init via __VA_ARGS__
 */
 
 int main()
@@ -31,7 +30,7 @@ int main()
     error = stackInit(&stk);
     CHECK_ERROR(error);
     
-    error = stackPush(&stk, 1);
+    error = stackPush(&stk, 0);
     CHECK_ERROR(error); 
 
     error = stackPush(&stk, 2);

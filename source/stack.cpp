@@ -129,14 +129,14 @@ static unsigned long long calculateDataHash(const Stack* stk);
 
 
 
-#define ASSERT_ERROR(condition, error)\
-do\
-{\
-    if (condition)\
-    {\
-        stackDump(stk, error);\
-        return error;\
-    }\
+#define CHECK_CONDITION_RETURN_ERROR(condition, error)        \
+do                                                            \
+{                                                             \
+    if (condition)                                            \
+    {                                                         \
+        stackDump(stk, error);                                \
+        return error;                                         \
+    }                                                         \
 } while (0)
 
 
@@ -166,8 +166,8 @@ static StackError increaseCapacity(Stack* stk, const float coef)
 {
     CHECK_STACK_HASH_RETURN_ERROR(stk);
 
-    ASSERT_ERROR(stk == NULL,     STRUCT_NULL_ERROR);
-    ASSERT_ERROR(stk->data == NULL, DATA_NULL_ERROR);
+    CHECK_CONDITION_RETURN_ERROR(stk == NULL,     STRUCT_NULL_ERROR);
+    CHECK_CONDITION_RETURN_ERROR(stk->data == NULL, DATA_NULL_ERROR);
 
     CHECK_DATA_HASH_RETURN_ERROR(stk);
 
@@ -179,7 +179,12 @@ static StackError increaseCapacity(Stack* stk, const float coef)
     stk->data = (elem_t*)(size_t(stk->data) - sizeof(canary_t));
 
     elem_t* temp = (elem_t*)realloc(stk->data, stk->capacity * sizeof(elem_t) + 2 * sizeof(canary_t));
-    if (temp == NULL) return MEMORY_ALLOCATION_ERROR;
+    if (temp == NULL)
+    {
+        stk->capacity = (int)((float)stk->capacity / coef);
+        return MEMORY_ALLOCATION_ERROR;
+    }
+
     stk->data = temp;
 
     ((canary_t*)stk->data)[0] = CANARY_VALUE;
@@ -194,11 +199,8 @@ static StackError increaseCapacity(Stack* stk, const float coef)
     if (temp == NULL) return MEMORY_ALLOCATION_ERROR;
      
     stk->data = temp;
+
     #endif
-
-
-    CHECK_DUMP_AND_RETURN_ERROR(stk);
-    ASSERT_ERROR(stk->data == NULL, MEMORY_ALLOCATION_ERROR);
 
 
     #ifndef RELEASE
@@ -210,8 +212,6 @@ static StackError increaseCapacity(Stack* stk, const float coef)
 
     #endif
 
-    CHECK_DUMP_AND_RETURN_ERROR(stk);
-
     return NO_ERROR;
 
 }
@@ -219,7 +219,7 @@ static StackError increaseCapacity(Stack* stk, const float coef)
 
 StackError stackInit_internal(Stack* stk, size_t capacity, StackInitInfo info)
 {
-    ASSERT_ERROR(stk == NULL, DATA_NULL_ERROR);
+    CHECK_CONDITION_RETURN_ERROR(stk == NULL, DATA_NULL_ERROR);
 
     stk->capacity = (int)capacity;
     stk->size = 0;
@@ -231,20 +231,24 @@ StackError stackInit_internal(Stack* stk, size_t capacity, StackInitInfo info)
     #endif
 
     #ifdef CANARY_PROTECT
+    
+    // Allocate memory for data and 2 canary elements.
     stk->data = (elem_t*)malloc(capacity * sizeof(elem_t) + 2 * sizeof(canary_t));
+    CHECK_CONDITION_RETURN_ERROR(stk->data == NULL, MEMORY_ALLOCATION_ERROR);
+
+    // Set the left canary.
     ((canary_t*)stk->data)[0] = CANARY_VALUE;
-    if (stk->data == NULL) return MEMORY_ALLOCATION_ERROR;
 
     // Move the data pointer to the real data.
     stk->data = (elem_t*)((size_t)stk->data + sizeof(canary_t));
+
+    // Set the right canary.
     ((canary_t*)(stk->data + stk->capacity))[0] = CANARY_VALUE;
+
     #else
     stk->data = (elem_t*)malloc(capacity * sizeof(elem_t));
-    if (stk->data == NULL) return MEMORY_ALLOCATION_ERROR;
+    CHECK_CONDITION_RETURN_ERROR(stk->data == NULL, MEMORY_ALLOCATION_ERROR);
     #endif
-
-    CHECK_DUMP_AND_RETURN_ERROR(stk);
-    if (stk->data == NULL) return DATA_NULL_ERROR;
 
 
     #ifndef RELEASE
@@ -266,11 +270,11 @@ StackError stackInit_internal(Stack* stk, StackInitInfo info)
 
 StackError stackPush(Stack* stk, const elem_t elem)
 {
+    CHECK_CONDITION_RETURN_ERROR(stk == NULL, STRUCT_NULL_ERROR);
+
     CHECK_STACK_HASH_RETURN_ERROR(stk);
 
     CHECK_DUMP_AND_RETURN_ERROR(stk);
-
-    ASSERT_ERROR(stk == NULL, DATA_NULL_ERROR);
 
     CHECK_DATA_HASH_RETURN_ERROR(stk);    
     
@@ -289,18 +293,19 @@ StackError stackPush(Stack* stk, const elem_t elem)
 
 StackError stackPop(Stack* stk, elem_t* elem)
 {
+    CHECK_CONDITION_RETURN_ERROR(stk == NULL, ELEM_NULL_ERROR);
+    CHECK_CONDITION_RETURN_ERROR(elem == NULL, ELEM_NULL_ERROR);
+    CHECK_CONDITION_RETURN_ERROR(stk->data == NULL, DATA_NULL_ERROR);
+    CHECK_CONDITION_RETURN_ERROR(stk->size <= 0, POP_OUT_OF_RANGE_ERROR); 
+
     CHECK_STACK_HASH_RETURN_ERROR(stk);
     
     CHECK_DUMP_AND_RETURN_ERROR(stk);
-
-    ASSERT_ERROR(elem == NULL, ELEM_NULL_ERROR);
-    ASSERT_ERROR(stk->data == NULL, DATA_NULL_ERROR);
-    ASSERT_ERROR(stk->size <= 0, POP_OUT_OF_RANGE_ERROR); 
     
     CHECK_DATA_HASH_RETURN_ERROR(stk);
 
     // If the size is STACK_CAPACITY_MULTIPLIER^2 smaller, than the capacity,...
-    if (stk->size <= (int)((float)stk->capacity / (STACK_CAPACITY_MULTIPLIER * STACK_CAPACITY_MULTIPLIER)) 
+    if (stk->size <= (int)((float)stk->capacity / (2.0 * STACK_CAPACITY_MULTIPLIER)) 
         && stk->size >= STACK_SIZE_DEFAULT)
         increaseCapacity(stk, 1.0/STACK_CAPACITY_MULTIPLIER); //... decrease the capacity.
 
@@ -313,23 +318,25 @@ StackError stackPop(Stack* stk, elem_t* elem)
     return NO_ERROR;
 }
 
-
-#ifdef CANARY_PROTECT
-    #define FREE_DATA(stk) free((char*)stk->data - sizeof(canary_t))
-#else
-    #define FREE_DATA(stk) free((char*)stk->data)
-#endif
-
+inline static void freeData(Stack* stk)
+{
+    #ifdef CANARY_PROTECT
+        free((char*)stk->data - sizeof(canary_t));
+    #else
+        free((char*)stk->data);
+    #endif
+}
 
 StackError stackDtor(Stack* stk)
 {
-    ASSERT_ERROR(stk->data == NULL,   DATA_NULL_ERROR);
-    ASSERT_ERROR(stk       == NULL, STRUCT_NULL_ERROR);
+    CHECK_CONDITION_RETURN_ERROR(stk       == NULL, STRUCT_NULL_ERROR);
+    CHECK_CONDITION_RETURN_ERROR(stk->data == NULL,   DATA_NULL_ERROR);
 
     CHECK_STACK_HASH_RETURN_ERROR(stk);
+    
     CHECK_DUMP_AND_RETURN_ERROR(stk);
 
-    FREE_DATA(stk);
+    freeData(stk);
 
     CHECK_DATA_HASH_RETURN_ERROR(stk);
 
@@ -357,9 +364,15 @@ void stackDump_internal(const Stack* stk, const StackError err,
 {
     #define print(...) fprintf(stkerr, __VA_ARGS__)
     #define printColor(color, str,...) fprintf(stkerr, "<font color=" #color ">" str "</font>", __VA_ARGS__)
-
-
+    
     print("<pre>");
+
+    if (err == STRUCT_NULL_ERROR)
+    {
+        printColor(red, "NULL stack in file %s(%lu) function %s\n", fileName, line, funcName);
+        return;
+    }
+
     print("----------------------------------------------------------------\n");
 
     printColor(purple, "%s[%p] ", stk->info.varName, stk);
