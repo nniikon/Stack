@@ -81,9 +81,9 @@ static unsigned long long calculateDataHash(const Stack* stk);
     } while (0) 
 
 #else
-    #define CHECK_DUMP_AND_RETURN_ERROR ;
-    #define DUMP_AND_RETURN_ERROR       ;
-    #define STACK_DUMP                  ;
+    #define CHECK_DUMP_AND_RETURN_ERROR(stk)  ;
+    #define DUMP_AND_RETURN_ERROR(stk, error) ;
+    #define STACK_DUMP(stk, error)            ;
 #endif                                          
 
 
@@ -120,8 +120,9 @@ static unsigned long long calculateDataHash(const Stack* stk);
     
 
 #else
-    #define CHECK_HASH_RETURN_ERROR(stk) ;
-    #define UPDATE_HASH(stk) ;
+    #define CHECK_DATA_HASH_RETURN_ERROR(stk)  ;
+    #define CHECK_STACK_HASH_RETURN_ERROR(stk) ;
+    #define UPDATE_HASH(stk)                   ;
 #endif
 
 
@@ -151,10 +152,10 @@ static StackError checkStackError(Stack *stk)
     if (*(canary_t*)((size_t)stk->data - sizeof(canary_t)) != CANARY_VALUE) return DEAD_DATA_CANARY_ERROR;
     if (*(canary_t*)(stk->data + stk->capacity) != CANARY_VALUE)            return DEAD_DATA_CANARY_ERROR;
 #endif
+    if (stk       == NULL)                return STRUCT_NULL_ERROR;
     if (stk->capacity < 0)                return NEGATIVE_CAPACITY_ERROR;
     if (stk->size     < 0)                return NEGATIVE_SIZE_ERROR;
     if (stk->data == NULL)                return DATA_NULL_ERROR;
-    if (stk       == NULL)                return STRUCT_NULL_ERROR;
     if (stk->size > stk->capacity)        return SIZE_CAPACITY_ERROR;
     else      /*POST IRONIYA*/            return NO_ERROR;
 
@@ -340,6 +341,12 @@ StackError stackDtor(Stack* stk)
     }
 
     #endif
+
+    if (stkerr != stderr)
+    {
+        if (fclose(stkerr) != 0)
+            return CLOSING_FILE_ERROR;
+    }
 
     return NO_ERROR;
 }
